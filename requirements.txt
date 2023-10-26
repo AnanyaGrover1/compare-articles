@@ -19,3 +19,4 @@ typing==3.7.4.3
 urllib3==1.26.17
 virtualenv==20.15.1
 zipp==1.2.0
+python-dotenv==0.19.1
