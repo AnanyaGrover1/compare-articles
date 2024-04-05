@@ -22,8 +22,6 @@ except AttributeError:
 else:
     ssl._create_default_https_context = _create_unverified_https_context
 
-from googlesearch import search
-search("Google")
 
 load_dotenv()
 
@@ -39,6 +37,7 @@ load_dotenv()
 # Get API key.
 api_key = os.getenv("OPEN_API_KEY")
 NEWS_API_KEY = os.getenv("NEWS_KEY")
+PERIGON_KEY = os.getenv("PERIGON_KEY")
 
 st.title("Compare News Articles")
 
@@ -91,11 +90,11 @@ def get_article_headline(url):
 def extract_keywords(headline):
     try:
         response = openai.Completion.create(
-            engine="gpt-3.5-turbo-instruct",  # or another powerful engine like "gpt-4"
-            prompt=f"Please list the most relevant keywords from the following news headline, "\
-            f"including any proper nouns, unique phrases, and important concepts. "\
-            f"These keywords should enable someone to understand the main focus of the article without reading it. "\
-            f"Present the keywords as a comma-separated list.\n\n"\
+            engine="gpt-3.5-turbo-instruct",
+            prompt=f"Please list the most relevant keywords from the following news headline, "
+            f"including any proper nouns, unique phrases, and important concepts. "
+            f"These keywords should enable someone to understand the main focus of the article without reading it. "
+            f"Present the keywords as a comma-separated list.\n\n"
             f"Headline: \"{headline}\"",
             max_tokens=60,
             temperature=0,  # deterministic output
@@ -109,7 +108,26 @@ def extract_keywords(headline):
         return []
 
 
+def fetch_article_content(url):
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        article = soup.find('article')
+        text = article.get_text(separator='\n', strip=True)
+
+        return text
+    except Exception as e:
+        st.warning(f"Could not fetch article from {url}. Error: {e}")
+        return None
+
 # Function to find related articles using NewsAPI and keywords extracted
+
+
 def find_related_articles(keywords):
     query = ' '.join(keywords)  # Combine keywords into a single query string
     query = urllib.parse.quote_plus(query)  # URL-encode the query string
@@ -117,14 +135,15 @@ def find_related_articles(keywords):
     related_urls = []
 
     try:
-        # Make a request to the GNews API to get related articles.
-        news_api_url = f'https://newsapi.org/v2/everything?q={query}&apiKey={NEWS_API_KEY}'
+        # Make a request to the News API to get related articles.
+        # news_api_url = f'https://newsapi.org/v2/everything?q={query}&apiKey={NEWS_API_KEY}'
+        news_api_url = f'https://api.goperigon.com/v1/all?q={query}&apiKey={PERIGON_KEY}&sourceGroup=top100'
         response = requests.get(news_api_url)
         data = response.json()
 
         if 'articles' in data:
             # Limit to first 5 related articles
-            for article in data['articles'][:10]:
+            for article in data['articles'][:5]:
                 if article['url'] != "https://removed.com":
                     related_urls.append(article['url'])
 
@@ -141,6 +160,25 @@ def find_related_articles(keywords):
     return related_urls
 
 
+def fetch_article_content(url):
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        article = soup.find('article')
+        text = article.get_text(separator='\n', strip=True)
+
+        return text
+    except Exception as e:
+        st.warning(
+            f"Unfortunately, this article could not be scraped from {url}.")
+        return None
+
+
 # Button to find related articles
 if st.button("Find Related Articles"):
     if url:
@@ -155,21 +193,47 @@ if st.button("Find Related Articles"):
             st.write(f"Keywords Extracted: {keywords}")
 
             related_urls = find_related_articles(keywords)
+            article_content = []
+            first_article = fetch_article_content(url)
+            if first_article:
+                article_content.append(first_article)
 
             if related_urls:
                 st.write("Related articles found:")
                 for related_url in related_urls:
                     st.write(related_url)
+                    article = fetch_article_content(related_url)
+                    if article:
+                        article_content.append(article)
+                        if len(article_content) >= 3:
+                            break
+                    else:
+                        continue
 
-                # Use OpenAI's GPT to summarize the articles.
-                # Prepare the message for the ChatGPT API.
-                message = f"Read and summarize these articles: {', '.join(related_urls)}"
+                message = f"""Frames are the way media outlets select, organize, and present information to the audience.
+            1. Read these three articles about the same news event (the content is provided below) and understand their perspectives.
+            2. Begin by identifying points where all articles agree on the news event's details.
+            3. Then, pinpoint any factual discrepancies between the articles.
+            4. Finally, analyze the differences in how the articles frame the event and their viewpoints, including any selective omissions of information.
+
+            Now, Summarize the articles together in three sets of bullet points:
+
+            * Points of agreement between the three articles
+            * Points of factual disagreement, if any
+            * Differences in framing and viewpoint, and selective omissions:"""
+
+                for i, content in enumerate(article_content):
+                    message += f"Article {i+1}:\n{content}\n\n"
+
+                message += """
+
+            Comparison:"""
+
+                print(message)
+
                 response = openai.ChatCompletion.create(
-                    model="gpt-4",
-                    messages=[
-                        {"role": "user", "content": message}
-                    ],
-
+                    model="gpt-4-1106-preview",
+                    messages=[{"role": "user", "content": message}],
                     max_tokens=1000,
                     api_key=api_key,
                 )
@@ -177,7 +241,9 @@ if st.button("Find Related Articles"):
                 # Display the summarized content.
                 summarized_content = response.choices[0].message['content'].strip(
                 )
-                st.subheader("Summary:")
+                st.subheader(
+                    "Comparative summary of top three articles found:")
+
                 st.write(summarized_content)
             else:
                 st.warning(

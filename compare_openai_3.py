@@ -16,6 +16,7 @@ st.title("Compare news articles")
 # Accept user input for the URLs
 url1 = st.text_input("Enter the first article's URL: ")
 url2 = st.text_input("Enter the second article's URL: ")
+url3 = st.text_input("Enter the third article's URL: ")
 
 
 def fetch_article_content(url):
@@ -37,15 +38,16 @@ def fetch_article_content(url):
 
 
 if st.button("Zero shot"):
-    if url1 and url2:
+    if url1 and url2 and url3:
         # Fetch articles' contents
         article1_content = fetch_article_content(url1)
         article2_content = fetch_article_content(url2)
+        article3_content = fetch_article_content(url3)
 
         if article1_content and article2_content:
             # Create the user message for ChatGPT, with the actual content instead of URLs
             user_message = f"""Summarize these articles about the same news event (the content is provided below) in three sets of bullet points:
-            * Points of agreement between first article and second article
+            * Points of agreement between the three articles
             * Points of factual disagreement, if any
             * Differences in framing and viewpoint, and selective omissions:
 
@@ -55,11 +57,14 @@ if st.button("Zero shot"):
             Article 2 Content:
             {article2_content}
 
+            Article 3 Content:
+            {article3_content}
+
             Comparison:
 """
 
             response = openai.ChatCompletion.create(
-                model="gpt-4",
+                model="gpt-4-1106-preview",
                 messages=[
                     {"role": "user", "content": user_message}
                 ],
@@ -81,22 +86,23 @@ if st.button("Zero shot"):
 
 
 if st.button("Chain of Thought"):
-    if url1 and url2:
+    if url1 and url2 and url3:
         # Fetch articles' contents
         article1_content = fetch_article_content(url1)
         article2_content = fetch_article_content(url2)
+        article3_content = fetch_article_content(url3)
 
         if article1_content and article2_content:
             # Create the user message for ChatGPT, with the actual content instead of URLs
             user_message = f"""Frames are the way media outlets select, organize, and present information to the audience.
-            1. Read these two articles about the same news event (the content is provided below) and understand their perspectives.
-            2. Begin by identifying points where both articles agree on the news event's details.
+            1. Read these three articles about the same news event (the content is provided below) and understand their perspectives.
+            2. Begin by identifying points where all articles agree on the news event's details.
             3. Then, pinpoint any factual discrepancies between the articles.
             4. Finally, analyze the differences in how the articles frame the event and their viewpoints, including any selective omissions of information.
 
             Now, Summarize the articles together in three sets of bullet points:
 
-            * Points of agreement between first article and second article
+            * Points of agreement between the three articles
             * Points of factual disagreement, if any
             * Differences in framing and viewpoint, and selective omissions:
 
@@ -109,12 +115,17 @@ if st.button("Chain of Thought"):
             Article 2 Content:
             {article2_content}
 
-            After summarizing both articles individually, proceed to compare them directly.
+            Take note of the key points and frames presented in the third article.
+
+            Article 3 Content:
+            {article2_content}
+
+            After summarizing all articles individually, proceed to compare them directly.
 
             Comparison:"""
 
             response = openai.ChatCompletion.create(
-                model="gpt-4",
+                model="gpt-4-1106-preview",
                 messages=[
                     {"role": "user", "content": user_message}
                 ],
@@ -136,17 +147,18 @@ if st.button("Chain of Thought"):
 
 
 if st.button("PanelGPT"):
-    if url1 and url2:
+    if url1 and url2 and url3:
         # Fetch articles' contents
         article1_content = fetch_article_content(url1)
         article2_content = fetch_article_content(url2)
+        article3_content = fetch_article_content(url3)
 
         if article1_content and article2_content:
             # Create the user message for ChatGPT, with the actual content instead of URLs
             user_message = f"""3 experts are discussing the following question with a panel discussion, trying to solve it step by step, to make sure the result is correct and avoid penalty:
 
             Summarize these articles about the same news event (the content is provided below) in three sets of bullet points:
-            * Points of agreement between first article and second article
+            * Points of agreement between the three articles
             * Points of factual disagreement, if any
             * Differences in framing and viewpoint, and selective omissions:
 
@@ -156,10 +168,13 @@ if st.button("PanelGPT"):
             Article 2 Content:
             {article2_content}
 
+            Article 3 Content:
+            {article3_content}
+
             Comparison:"""
 
             response = openai.ChatCompletion.create(
-                model="gpt-4",
+                model="gpt-4-1106-preview",
                 messages=[
                     {"role": "user", "content": user_message}
                 ],
