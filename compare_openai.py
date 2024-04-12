@@ -44,10 +44,13 @@ if st.button("Zero shot"):
 
         if article1_content and article2_content:
             # Create the user message for ChatGPT, with the actual content instead of URLs
-            user_message = f"""Summarize these articles about the same news event (the content is provided below) in three sets of bullet points:
-            * Points of agreement between first article and second article
-            * Points of factual disagreement, if any
-            * Differences in framing and viewpoint, and selective omissions:
+            user_message = f"""Summarize these articles about the same news event (the content is provided below) in five sets of bullet points:
+            * Upto five main points of agreement between the articles
+            * Any points of factual disagreement
+            * Differences in framing, where frames are the way media outlets select, organize, and present information to the audience.
+            * Differences in viewpoints, where viewpoints are defined as value-based opinions and attitudes.
+            * Selective omissions
+
 
             Article 1 Content:
             {article1_content}
@@ -94,11 +97,13 @@ if st.button("Chain of Thought"):
             3. Then, pinpoint any factual discrepancies between the articles.
             4. Finally, analyze the differences in how the articles frame the event and their viewpoints, including any selective omissions of information.
 
-            Now, Summarize the articles together in three sets of bullet points:
+            Now, Summarize the articles together in five sets of bullet points:
 
-            * Points of agreement between first article and second article
-            * Points of factual disagreement, if any
-            * Differences in framing and viewpoint, and selective omissions:
+            * Upto five main points of agreement between the articles
+            * Any points of factual disagreement
+            * Differences in framing, where frames are the way media outlets select, organize, and present information to the audience.
+            * Differences in viewpoints, where viewpoints are defined as value-based opinions and attitudes.
+            * Selective omissions
 
             Take note of the key points and frames presented in the first article.
             Article 1 Content:
@@ -135,46 +140,46 @@ if st.button("Chain of Thought"):
         st.warning("Please enter both URLs to compare.")
 
 
-if st.button("PanelGPT"):
-    if url1 and url2:
-        # Fetch articles' contents
-        article1_content = fetch_article_content(url1)
-        article2_content = fetch_article_content(url2)
+# if st.button("PanelGPT"):
+#     if url1 and url2:
+#         # Fetch articles' contents
+#         article1_content = fetch_article_content(url1)
+#         article2_content = fetch_article_content(url2)
 
-        if article1_content and article2_content:
-            # Create the user message for ChatGPT, with the actual content instead of URLs
-            user_message = f"""3 experts are discussing the following question with a panel discussion, trying to solve it step by step, to make sure the result is correct and avoid penalty:
+#         if article1_content and article2_content:
+#             # Create the user message for ChatGPT, with the actual content instead of URLs
+#             user_message = f"""3 experts are discussing the following question with a panel discussion, trying to solve it step by step, to make sure the result is correct and avoid penalty:
 
-            Summarize these articles about the same news event (the content is provided below) in three sets of bullet points:
-            * Points of agreement between first article and second article
-            * Points of factual disagreement, if any
-            * Differences in framing and viewpoint, and selective omissions:
+#             Summarize these articles about the same news event (the content is provided below) in three sets of bullet points:
+#             * Points of agreement between first article and second article
+#             * Points of factual disagreement, if any
+#             * Differences in framing and viewpoint, and selective omissions:
 
-            Article 1 Content:
-            {article1_content}
+#             Article 1 Content:
+#             {article1_content}
 
-            Article 2 Content:
-            {article2_content}
+#             Article 2 Content:
+#             {article2_content}
 
-            Comparison:"""
+#             Comparison:"""
 
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "user", "content": user_message}
-                ],
-                max_tokens=1000,  # Increased max_tokens in case articles are long
-                api_key=api_key
-            )
+#             response = openai.ChatCompletion.create(
+#                 model="gpt-4",
+#                 messages=[
+#                     {"role": "user", "content": user_message}
+#                 ],
+#                 max_tokens=1000,  # Increased max_tokens in case articles are long
+#                 api_key=api_key
+#             )
 
-            # Extract the "content" part under "choices" in the response
-            comparison_paragraph = response.choices[0].message['content'].strip(
-            )
+#             # Extract the "content" part under "choices" in the response
+#             comparison_paragraph = response.choices[0].message['content'].strip(
+#             )
 
-            # Display the comparison
-            st.subheader("Comparison:")
-            st.write(comparison_paragraph)
-        else:
-            st.warning("Could not fetch content from one or both URLs.")
-    else:
-        st.warning("Please enter both URLs to compare.")
+#             # Display the comparison
+#             st.subheader("Comparison:")
+#             st.write(comparison_paragraph)
+#         else:
+#             st.warning("Could not fetch content from one or both URLs.")
+#     else:
+#         st.warning("Please enter both URLs to compare.")
