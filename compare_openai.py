@@ -2,14 +2,14 @@ import os
 import requests
 from bs4 import BeautifulSoup
 import streamlit as st
-import openai
+from openai import OpenAI
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
 
-api_key = os.getenv("OPEN_API_KEY")
+api_key = os.getenv("OPENAI_API_KEY")
 
 st.title("Compare news articles")
 
@@ -60,19 +60,19 @@ if st.button("Zero shot"):
 
             Comparison:
 """
+            client = OpenAI()
 
-            response = openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model="gpt-4",
                 messages=[
                     {"role": "user", "content": user_message}
                 ],
                 max_tokens=1000,  # Increased max_tokens in case articles are long
-                api_key=api_key
+                # api_key=api_key
             )
 
             # Extract the "content" part under "choices" in the response
-            comparison_paragraph = response.choices[0].message['content'].strip(
-            )
+            comparison_paragraph = response.choices[0].message.content.strip()
 
             # Display the comparison
             st.subheader("Comparison:")
@@ -118,18 +118,19 @@ if st.button("Chain of Thought"):
 
             Comparison:"""
 
-            response = openai.ChatCompletion.create(
+            client = OpenAI()
+
+            response = client.chat.completions.create(
                 model="gpt-4",
                 messages=[
                     {"role": "user", "content": user_message}
                 ],
                 max_tokens=1000,  # Increased max_tokens in case articles are long
-                api_key=api_key
+                # api_key=api_key
             )
 
             # Extract the "content" part under "choices" in the response
-            comparison_paragraph = response.choices[0].message['content'].strip(
-            )
+            comparison_paragraph = response.choices[0].message.content.strip()
 
             # Display the comparison
             st.subheader("Comparison:")
@@ -138,48 +139,3 @@ if st.button("Chain of Thought"):
             st.warning("Could not fetch content from one or both URLs.")
     else:
         st.warning("Please enter both URLs to compare.")
-
-
-# if st.button("PanelGPT"):
-#     if url1 and url2:
-#         # Fetch articles' contents
-#         article1_content = fetch_article_content(url1)
-#         article2_content = fetch_article_content(url2)
-
-#         if article1_content and article2_content:
-#             # Create the user message for ChatGPT, with the actual content instead of URLs
-#             user_message = f"""3 experts are discussing the following question with a panel discussion, trying to solve it step by step, to make sure the result is correct and avoid penalty:
-
-#             Summarize these articles about the same news event (the content is provided below) in three sets of bullet points:
-#             * Points of agreement between first article and second article
-#             * Points of factual disagreement, if any
-#             * Differences in framing and viewpoint, and selective omissions:
-
-#             Article 1 Content:
-#             {article1_content}
-
-#             Article 2 Content:
-#             {article2_content}
-
-#             Comparison:"""
-
-#             response = openai.ChatCompletion.create(
-#                 model="gpt-4",
-#                 messages=[
-#                     {"role": "user", "content": user_message}
-#                 ],
-#                 max_tokens=1000,  # Increased max_tokens in case articles are long
-#                 api_key=api_key
-#             )
-
-#             # Extract the "content" part under "choices" in the response
-#             comparison_paragraph = response.choices[0].message['content'].strip(
-#             )
-
-#             # Display the comparison
-#             st.subheader("Comparison:")
-#             st.write(comparison_paragraph)
-#         else:
-#             st.warning("Could not fetch content from one or both URLs.")
-#     else:
-#         st.warning("Please enter both URLs to compare.")
