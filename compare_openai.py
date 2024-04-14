@@ -1,15 +1,13 @@
 import os
+import streamlit as st
+import newspaper
+from openai import OpenAI
 import requests
 from bs4 import BeautifulSoup
-import streamlit as st
-from openai import OpenAI
-import newspaper
-import json
 
 from dotenv import load_dotenv
 
 load_dotenv()
-
 
 api_key = os.getenv("OPENAI_API_KEY")
 
@@ -18,162 +16,135 @@ st.title("Compare news articles")
 # Accept user input for the URLs
 url1 = st.text_input("Enter the first article's URL: ")
 url2 = st.text_input("Enter the second article's URL: ")
-
-
-# def fetch_article_content(url):
-#     headers = {
-#         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
-
-#     try:
-#         response = requests.get(url, headers=headers)
-#         response.raise_for_status()
-
-#         soup = BeautifulSoup(response.content, 'html.parser')
-
-#         # Try to find the 'article' tag first
-#         content = soup.find('article')
-
-#         # If 'article' tag not found, try other methods
-#         if content is None:
-#             # Try finding the main body of text using common tags
-#             for tag in ['main', 'div']:
-#                 content = soup.find(tag)
-#                 if content:
-#                     break
-
-#         # If still not found, return a descriptive error
-#         if content is None:
-#             raise ValueError(
-#                 "Unable to locate the article's text. Please check the article structure.")
-
-#         # Safely extract text now that we've ensured content is not None
-#         text = content.get_text(separator='\n', strip=True)
-
-#         return text
-#     except Exception as e:
-#         st.warning(f"Could not fetch article from {url}. Error: {e}")
-#         return None
+# New line for optional third URL input
+url3 = st.text_input("Enter the third article's URL (optional): ")
 
 
 def fetch_article_content(url):
-    try:
-        # Initialize a newspaper article object
-        article = newspaper.Article(url=url, language='en')
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
 
-        # Download and parse the article
+    # Attempt with BeautifulSoup
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        content = soup.find('article')
+
+        if content is None:
+            for tag in ['main', 'div']:
+                content = soup.find(tag)
+                if content:
+                    break
+
+        if content is not None:
+            text = content.get_text(separator='\n', strip=True)
+            return text
+    except requests.exceptions.RequestException as e:
+        # print statements for error
+        print(
+            f"BeautifulSoup method failed for {url}. Error: {e}. Attempting newspaper3k...")
+
+    # If BeautifulSoup method didn't work, fallback to newspaper3k
+    try:
+        article = newspaper.Article(url=url, language='en')
         article.download()
         article.parse()
-
-        # Optionally to load additional NLP data
-        # article.nlp()  # Uncomment to se nlp features like keywords or summary
-
-        # returning only the article text
         return str(article.text)
     except Exception as e:
-        st.warning(f"Could not fetch article from {url}. Error: {e}")
+        # If newspaper3k also fails, then print an error message
+        print(
+            f"Could not fetch article content from {url} using both BeautifulSoup and newspaper3k. Error: {e}.")
         return None
 
 
-if st.button("Zero shot"):
-    if url1 and url2:
-        # Fetch articles' contents
-        article1_content = fetch_article_content(url1)
-        article2_content = fetch_article_content(url2)
+def process_articles(urls, mode):
+    # Fetch content for non-empty URLs
+    article_contents = [fetch_article_content(url) for url in urls if url]
 
-        if article1_content and article2_content:
-            # Create the user message for ChatGPT, with the actual content instead of URLs
-            user_message = f"""Summarize these articles about the same news event (the content is provided below) in five sets of bullet points:
-            * Upto five main points of agreement between the articles
-            * Any points of factual disagreement
-            * Differences in framing, where frames are the way media outlets select, organize, and present information to the audience.
-            * Differences in viewpoints, where viewpoints are defined as value-based opinions and attitudes.
-            * Selective omissions
+    if not all(article_contents):
+        st.warning("Could not fetch content from one or more URLs.")
+        return
 
+    # Concatenate article contents for the user message
+    articles_comparison_texts = "\n\n".join(
+        [f"Article {i+1} Content:\n{content}" for i, content in enumerate(article_contents)])
 
-            Article 1 Content:
-            {article1_content}
+    if mode == "Zero shot":
+        user_message = f"""Summarize these articles about the same news event (the content is provided below) in five sets of bullet points:
+        * Up to five main points of agreement between the articles
+        * Any points of factual disagreement
+        * Differences in framing
+        * Differences in viewpoints
+        * Selective omissions
 
-            Article 2 Content:
-            {article2_content}
+        {articles_comparison_texts}
 
-            Comparison:
-"""
-            client = OpenAI()
+        Comparison:
+        """
+    elif mode == "Chain of Thought":
+        user_message = f"""
 
-            response = client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "user", "content": user_message}
-                ],
-                max_tokens=1000,  # Increased max_tokens in case articles are long
-                # api_key=api_key
-            )
+        Frames are the way media outlets select, organize, and present information to the audience. For example, The UK
+        media initially framed the migrant crisis in terms of negative economic impact, using dehumanizing language
+        like "swarms of migrants" and "cockroaches." However, after the widely shared image of three-year-old Syrian
+        Aylan Kurdi, the narrative shifted towards humanizing migrants, altering public perception.
 
-            # Extract the "content" part under "choices" in the response
-            comparison_paragraph = response.choices[0].message.content.strip()
+        Viewpoints are defined as value-based opinions and attitudes. The viewpoint could be of the author of the
+        news story or it could be presented through the inclusion of quotes and opinions that reflect the subjective
+        values of individuals or groups. For instance, coverage of an environmental policy reducing carbon emissions
+        may highlight perspectives of activists and experts supporting it, emphasizing the value of protecting the
+        planet, while other stories may focus on opposing viewpoints of industry leaders, such as concerns about jobs
+        being lost.
 
-            # Display the comparison
-            st.subheader("Comparison:")
-            st.write(comparison_paragraph)
-        else:
-            st.warning("Could not fetch content from one or both URLs.")
-    else:
-        st.warning("Please enter both URLs to compare.")
-
-
-if st.button("Chain of Thought"):
-    if url1 and url2:
-        # Fetch articles' contents
-        article1_content = fetch_article_content(url1)
-        article2_content = fetch_article_content(url2)
-
-        if article1_content and article2_content:
-            # Create the user message for ChatGPT, with the actual content instead of URLs
-            user_message = f"""Frames are the way media outlets select, organize, and present information to the audience.
-            1. Read these two articles about the same news event (the content is provided below) and understand their perspectives.
-            2. Begin by identifying points where both articles agree on the news event's details.
+        Given the above information, perform the following task step by step:
+            1. Read these articles about the same news event (the content is provided below) and understand them.
+            2. Begin by identifying points where both articles agree on the news event's factual details.
             3. Then, pinpoint any factual discrepancies between the articles.
-            4. Finally, analyze the differences in how the articles frame the event and their viewpoints, including any selective omissions of information.
+            4. Next, analyze the differences in frames between the articles.
+            5. Now, analyze the differences in the viewpoints presented in each article.
+            6. Finally, notice any selective omissions of information.
 
-            Now, Summarize the articles together in five sets of bullet points:
+            Now, summarize the articles together in five sets of bullet points:
 
             * Upto five main points of agreement between the articles
             * Any points of factual disagreement
-            * Differences in framing, where frames are the way media outlets select, organize, and present information to the audience.
-            * Differences in viewpoints, where viewpoints are defined as value-based opinions and attitudes.
+            * Differences in framing
+            * Differences in viewpoints
             * Selective omissions
 
-            Take note of the key points and frames presented in the first article.
-            Article 1 Content:
-            {article1_content}
+            Here are the articles:
 
-            Take note of the key points and frames presented in the second article.
+        {articles_comparison_texts}
 
-            Article 2 Content:
-            {article2_content}
+        Comparison:
+        """
 
-            After summarizing both articles individually, proceed to compare them directly.
+    client = OpenAI()
 
-            Comparison:"""
+    response = client.chat.completions.create(
+        model="gpt-4-turbo-preview",
+        messages=[
+            {"role": "user", "content": user_message}
+        ],
+        max_tokens=1000,  # Increased max_tokens in case articles are long
+        # api_key=api_key
+    )
 
-            client = OpenAI()
+    # Extract the "content" part under "choices" in the response
+    comparison_paragraph = response.choices[0].message.content.strip()
 
-            response = client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "user", "content": user_message}
-                ],
-                max_tokens=1000,  # Increased max_tokens in case articles are long
-                # api_key=api_key
-            )
+    # Display the comparison
+    st.subheader("Comparison:")
+    st.write(comparison_paragraph)
 
-            # Extract the "content" part under "choices" in the response
-            comparison_paragraph = response.choices[0].message.content.strip()
 
-            # Display the comparison
-            st.subheader("Comparison:")
-            st.write(comparison_paragraph)
-        else:
-            st.warning("Could not fetch content from one or both URLs.")
-    else:
-        st.warning("Please enter both URLs to compare.")
+urls = [url1, url2]  # Start with two URLs
+if url3:  # Add the third URL if present
+    urls.append(url3)
+
+if st.button("Zero shot"):
+    process_articles(urls, "Zero shot")
+elif st.button("Chain of Thought"):
+    process_articles(urls, "Chain of Thought")

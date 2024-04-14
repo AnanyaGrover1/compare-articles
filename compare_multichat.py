@@ -19,7 +19,6 @@ config_list = [
         'model': 'gpt-4-1106-preview',
         'api_key': api_key
 
-
     }
 ]
 
@@ -35,13 +34,14 @@ academic = autogen.AssistantAgent(
     name="academic",
     llm_config=llm_config,
     system_message="""You are an academic scholar in Media Studies. You specialize in analyzing news articles,
-    identifying points of view, and differentiating between factual information and narrative framing. """,
+    identifying points of view, and identifying frames in articles. Frames are abstractions or angles that guide how
+    information is constructed and communicated to the audience. Viewpoints are defined as value-based opinions and
+    attitudes.""",
     code_execution_config={"work_dir": "web", "use_docker": False},
 
 
     description="""This agent goes first and analyzes the point of views and framing in the articles.
     """
-
 
 )
 
@@ -54,8 +54,8 @@ summarizer = autogen.AssistantAgent(
     write the final summary in five sets of bullet points:
             * Upto five main points of agreement between the articles
             * Any points of factual disagreement
-            * Differences in framing, where frames are abstractions or angles that guide how information is constructed and communicated to the audience.
-            * Differences in viewpoints, where viewpoints are defined as value-based opinions and attitudes.
+            * Differences in framing
+            * Differences in viewpoints
             * Selective omissions
             """,
     code_execution_config={"work_dir": "web", "use_docker": False},
@@ -95,25 +95,7 @@ legal = autogen.AssistantAgent(
     description="""This agent is reponsible for offering legal insights.
     """
 
-
 )
-
-# create an AssistantAgent instance named "engineer"
-# engineer = autogen.AssistantAgent(
-#     name="engineer",
-#     llm_config=llm_config,
-#     system_message="""Engineer. You write python/shell code to solve tasks including finding information online through Google Search API. Wrap the code in a code block that specifies the script type. The user can't modify your code. So do not suggest incomplete code which requires others to modify. Don't use a code block if it's not intended to be executed by the user_proxy.
-# Don't include multiple code blocks in one response. Do not ask others to copy and paste the result. Check the execution result returned by the user_proxy.
-# If the result indicates there is an error, fix the error and output the code again. Suggest the full code instead of partial code or code changes. If the error can't be fixed or if the task is not solved even after the code is executed successfully, analyze the problem, revisit your assumption, collect additional info you need, and think of a different approach to try.
-# """,
-#     code_execution_config={"work_dir": "web", "use_docker": False},
-#     # Limit the number of consecutive auto-replies.
-
-#     description="""This agent will write python/shell code to solve tasks when asked by another agent to do so.
-#     """
-
-
-# )
 
 
 # create a UserProxyAgent instance named "user_proxy"
@@ -132,14 +114,6 @@ user_proxy = autogen.UserProxyAgent(
 Otherwise, reply CONTINUE, or the reason why the task is not solved yet.""",
 )
 
-# planner = autogen.AssistantAgent(
-#     name="Planner",
-#     system_message="""Planner. Suggest a plan. Revise the plan based on feedback from admin, until admin approval.
-# The plan may involve an engineer who can write code and a media expert, an analyst, and a factchecker who don't write code.
-# Explain the plan first. Be clear which step is performed by an engineer, and which step is performed by a media expert, the analyst, and the factchecker.
-# """,
-#     llm_config=llm_config,
-# )
 
 groupchat = autogen.GroupChat(
     agents=[user_proxy, academic, factchecker,
