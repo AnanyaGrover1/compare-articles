@@ -3,6 +3,8 @@ import requests
 from bs4 import BeautifulSoup
 import streamlit as st
 from openai import OpenAI
+import newspaper
+import json
 
 from dotenv import load_dotenv
 
@@ -18,19 +20,55 @@ url1 = st.text_input("Enter the first article's URL: ")
 url2 = st.text_input("Enter the second article's URL: ")
 
 
+# def fetch_article_content(url):
+#     headers = {
+#         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
+
+#     try:
+#         response = requests.get(url, headers=headers)
+#         response.raise_for_status()
+
+#         soup = BeautifulSoup(response.content, 'html.parser')
+
+#         # Try to find the 'article' tag first
+#         content = soup.find('article')
+
+#         # If 'article' tag not found, try other methods
+#         if content is None:
+#             # Try finding the main body of text using common tags
+#             for tag in ['main', 'div']:
+#                 content = soup.find(tag)
+#                 if content:
+#                     break
+
+#         # If still not found, return a descriptive error
+#         if content is None:
+#             raise ValueError(
+#                 "Unable to locate the article's text. Please check the article structure.")
+
+#         # Safely extract text now that we've ensured content is not None
+#         text = content.get_text(separator='\n', strip=True)
+
+#         return text
+#     except Exception as e:
+#         st.warning(f"Could not fetch article from {url}. Error: {e}")
+#         return None
+
+
 def fetch_article_content(url):
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
-
     try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
+        # Initialize a newspaper article object
+        article = newspaper.Article(url=url, language='en')
 
-        soup = BeautifulSoup(response.content, 'html.parser')
-        article = soup.find('article')
-        text = article.get_text(separator='\n', strip=True)
+        # Download and parse the article
+        article.download()
+        article.parse()
 
-        return text
+        # Optionally to load additional NLP data
+        # article.nlp()  # Uncomment to se nlp features like keywords or summary
+
+        # returning only the article text
+        return str(article.text)
     except Exception as e:
         st.warning(f"Could not fetch article from {url}. Error: {e}")
         return None

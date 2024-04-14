@@ -3,6 +3,8 @@ import autogen
 import requests
 from openai import OpenAI
 from bs4 import BeautifulSoup
+import newspaper
+import json
 
 
 from dotenv import load_dotenv
@@ -147,19 +149,21 @@ manager = autogen.GroupChatManager(groupchat=groupchat, llm_config=llm_config)
 
 
 def fetch_article_content(url):
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
-
     try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
+        # Initialize a newspaper article object
+        article = newspaper.Article(url=url, language='en')
 
-        soup = BeautifulSoup(response.content, 'html.parser')
-        article = soup.find('article')
-        text = article.get_text(separator='\n', strip=True)
+        # Download and parse the article
+        article.download()
+        article.parse()
 
-        return text
+        # Optionally to load additional NLP data
+        # article.nlp()  # Uncomment to se nlp features like keywords or summary
+
+        # returning only the article text
+        return str(article.text)
     except Exception as e:
+        st.warning(f"Could not fetch article from {url}. Error: {e}")
         return None
 
 
