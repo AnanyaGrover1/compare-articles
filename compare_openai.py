@@ -146,5 +146,5 @@ if url3:  # Add the third URL if present
 
 if st.button("Zero shot"):
     process_articles(urls, "Zero shot")
-elif st.button("Chain of Thought"):
+if st.button("Chain of Thought"):
     process_articles(urls, "Chain of Thought")

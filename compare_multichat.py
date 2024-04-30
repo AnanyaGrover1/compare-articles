@@ -36,7 +36,8 @@ academic = autogen.AssistantAgent(
     system_message="""You are an academic scholar in Media Studies. You specialize in analyzing news articles,
     identifying points of view, and identifying frames in articles. Frames are abstractions or angles that guide how
     information is constructed and communicated to the audience. Viewpoints are defined as value-based opinions and
-    attitudes.""",
+    attitudes, which could be of the author of the news story or be presented through quotes and opinions that reflect
+    the subjective values of individuals or groups.""",
     code_execution_config={"work_dir": "web", "use_docker": False},
 
 
@@ -123,21 +124,41 @@ manager = autogen.GroupChatManager(groupchat=groupchat, llm_config=llm_config)
 
 
 def fetch_article_content(url):
-    try:
-        # Initialize a newspaper article object
-        article = newspaper.Article(url=url, language='en')
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
 
-        # Download and parse the article
+    # Attempt with BeautifulSoup
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        content = soup.find('article')
+
+        if content is None:
+            for tag in ['main', 'div']:
+                content = soup.find(tag)
+                if content:
+                    break
+
+        if content is not None:
+            text = content.get_text(separator='\n', strip=True)
+            return text
+    except requests.exceptions.RequestException as e:
+        # print statements for error
+        print(
+            f"BeautifulSoup method failed for {url}. Error: {e}. Attempting newspaper3k...")
+
+    # If BeautifulSoup method didn't work, fallback to newspaper3k
+    try:
+        article = newspaper.Article(url=url, language='en')
         article.download()
         article.parse()
-
-        # Optionally to load additional NLP data
-        # article.nlp()  # Uncomment to se nlp features like keywords or summary
-
-        # returning only the article text
         return str(article.text)
     except Exception as e:
-        st.warning(f"Could not fetch article from {url}. Error: {e}")
+        # If newspaper3k also fails, then print an error message
+        print(
+            f"Could not fetch article content from {url} using both BeautifulSoup and newspaper3k. Error: {e}.")
         return None
 
 

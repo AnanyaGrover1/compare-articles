@@ -3,15 +3,10 @@ import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 import urllib.parse
-import openai
+from openai import OpenAI
 from dotenv import load_dotenv
 import requests
-import nltk
-from nltk import ne_chunk, pos_tag, word_tokenize
-from nltk.tree import Tree
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-from nltk import pos_tag
+import newspaper
 
 import ssl
 
@@ -26,17 +21,9 @@ else:
 load_dotenv()
 
 
-# Download required NLTK resources if not already downloaded
-# nltk.download('maxent_ne_chunker')
-# nltk.download('words')
-# nltk.download('punkt')
-# nltk.download('averaged_perceptron_tagger')
-# nltk.download('stopwords')
-
-
 # Get API key.
-api_key = os.getenv("OPEN_API_KEY")
-NEWS_API_KEY = os.getenv("NEWS_KEY")
+api_key = os.getenv("OPENAI_API_KEY")
+# NEWS_API_KEY = os.getenv("NEWS_KEY")
 PERIGON_KEY = os.getenv("PERIGON_KEY")
 
 st.title("Compare News Articles")
@@ -67,63 +54,35 @@ def get_article_headline(url):
     return headline.get_text().strip() if headline else None
 
 
-# Function to extract keywords based on importance from a news headline
-# def extract_keywords(headline):
-#     # Tokenize the headline
-#     tokens = word_tokenize(headline)
-
-#     # Remove stop words
-#     stop_words = set(stopwords.words('english'))
-#     filtered_tokens = [
-#         token for token in tokens if token.lower() not in stop_words]
-
-#     # Part-of-speech tagging
-#     tagged = pos_tag(filtered_tokens)
-
-#     # Identify important words - proper nouns (NNP), singular nouns (NN), and plural nouns (NNS)
-#     keywords = [word for word,
-#                 tag in tagged if tag in ('NNP', 'NN', 'NNS')]
-
-#     return keywords
-
 # Function that uses OpenAI's completion endpoint to extract keywords from a headline
 def extract_keywords(headline):
     try:
-        response = openai.Completion.create(
-            engine="gpt-3.5-turbo-instruct",
-            prompt=f"Please list the most relevant keywords from the following news headline, "
-            f"including any proper nouns, unique phrases, and important concepts. "
-            f"These keywords should enable someone to understand the main focus of the article without reading it. "
-            f"Present the keywords as a comma-separated list.\n\n"
-            f"Headline: \"{headline}\"",
+
+        client = OpenAI()
+
+        user_message = f"""Please list the most relevant keywords from the following news headline including any proper
+        nouns, unique phrases, and important concepts. These keywords should enable someone to understand the main focus
+        of the article without reading it. Present the keywords as a comma-separated list.\n\n"
+        Headline: \"{headline}\""""
+
+        response = client.chat.completions.create(
+            model="gpt-4-turbo-preview",
+            messages=[
+                {"role": "user", "content": user_message}
+            ],
             max_tokens=60,
-            temperature=0,  # deterministic output
-            api_key=api_key
+            temperature=0
+            # api_key=api_key
         )
-        keywords = response.choices[0].text.strip()
+
+        keywords = response.choices[0].message.content.strip()
         # Assuming the model responds with comma-separated keywords
         return keywords.split(', ')
-    except openai.error.OpenAIError as e:
-        print(f"OpenAI error: {e}")
-        return []
 
-
-def fetch_article_content(url):
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
-
-    try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-
-        soup = BeautifulSoup(response.content, 'html.parser')
-        article = soup.find('article')
-        text = article.get_text(separator='\n', strip=True)
-
-        return text
     except Exception as e:
-        st.warning(f"Could not fetch article from {url}. Error: {e}")
-        return None
+        st.warning(f"An unexpected error occurred: {e}")
+        raise
+
 
 # Function to find related articles using NewsAPI and keywords extracted
 
@@ -164,18 +123,38 @@ def fetch_article_content(url):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
 
+    # Attempt with BeautifulSoup
     try:
         response = requests.get(url, headers=headers)
         response.raise_for_status()
 
         soup = BeautifulSoup(response.content, 'html.parser')
-        article = soup.find('article')
-        text = article.get_text(separator='\n', strip=True)
+        content = soup.find('article')
 
-        return text
+        if content is None:
+            for tag in ['main', 'div']:
+                content = soup.find(tag)
+                if content:
+                    break
+
+        if content is not None:
+            text = content.get_text(separator='\n', strip=True)
+            return text
+    except requests.exceptions.RequestException as e:
+        # print statements for error
+        print(
+            f"BeautifulSoup method failed for {url}. Error: {e}. Attempting newspaper3k...")
+
+    # If BeautifulSoup method didn't work, fallback to newspaper3k
+    try:
+        article = newspaper.Article(url=url, language='en')
+        article.download()
+        article.parse()
+        return str(article.text)
     except Exception as e:
-        st.warning(
-            f"Unfortunately, this article could not be scraped from {url}.")
+        # If newspaper3k also fails, then print an error message
+        print(
+            f"Could not fetch article content from {url} using both BeautifulSoup and newspaper3k. Error: {e}.")
         return None
 
 
@@ -210,41 +189,63 @@ if st.button("Find Related Articles"):
                     else:
                         continue
 
-                message = f"""Frames are the way media outlets select, organize, and present information to the audience.
-            1. Read these three articles about the same news event (the content is provided below) and understand their perspectives.
-            2. Begin by identifying points where all articles agree on the news event's details.
+                message = f"""Frames are the way media outlets select, organize, and present information to the audience. For example, The UK
+        media initially framed the migrant crisis in terms of negative economic impact, using dehumanizing language
+        like "swarms of migrants" and "cockroaches." However, after the widely shared image of three-year-old Syrian
+        Aylan Kurdi, the narrative shifted towards humanizing migrants, altering public perception.
+
+        Viewpoints are defined as value-based opinions and attitudes. The viewpoint could be of the author of the
+        news story or it could be presented through the inclusion of quotes and opinions that reflect the subjective
+        values of individuals or groups. For instance, coverage of an environmental policy reducing carbon emissions
+        may highlight perspectives of activists and experts supporting it, emphasizing the value of protecting the
+        planet, while other stories may focus on opposing viewpoints of industry leaders, such as concerns about jobs
+        being lost.
+
+        Given the above information, perform the following task step by step:
+            1. Read these articles about the same news event (the content is provided below) and understand them.
+            2. Begin by identifying points where both articles agree on the news event's factual details.
             3. Then, pinpoint any factual discrepancies between the articles.
-            4. Finally, analyze the differences in how the articles frame the event and their viewpoints, including any selective omissions of information.
+            4. Next, analyze the differences in frames between the articles.
+            5. Now, analyze the differences in the viewpoints presented in each article.
+            6. Finally, notice any selective omissions of information.
 
-            Now, Summarize the articles together in three sets of bullet points:
+            Now, summarize the articles together in five sets of bullet points:
 
-            * Points of agreement between the three articles
-            * Points of factual disagreement, if any
-            * Differences in framing and viewpoint, and selective omissions:"""
+            * Upto five main points of agreement between the articles
+            * Any points of factual disagreement
+            * Differences in framing
+            * Differences in viewpoints
+            * Selective omissions
+
+            Here are the articles:"""
 
                 for i, content in enumerate(article_content):
                     message += f"Article {i+1}:\n{content}\n\n"
 
                 message += """
 
-            Comparison:"""
+                Comparison:"""
 
-                print(message)
+                client = OpenAI()
 
-                response = openai.ChatCompletion.create(
-                    model="gpt-4-1106-preview",
-                    messages=[{"role": "user", "content": message}],
+                response = client.chat.completions.create(
+                    model="gpt-4-turbo-preview",
+                    messages=[
+                        {"role": "user", "content": message}
+                    ],
                     max_tokens=1000,
-                    api_key=api_key,
+                    # api_key=api_key
                 )
 
-                # Display the summarized content.
-                summarized_content = response.choices[0].message['content'].strip(
+                # Extract the "content" part under "choices" in the response
+                comparison_paragraph = response.choices[0].message.content.strip(
                 )
+
+                # Display the comparison
                 st.subheader(
                     "Comparative summary of top three articles found:")
+                st.write(comparison_paragraph)
 
-                st.write(summarized_content)
             else:
                 st.warning(
                     "No related articles found. Please try a different headline.")
