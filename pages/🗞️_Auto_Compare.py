@@ -108,7 +108,7 @@ def find_related_articles(keywords):
 
         if 'articles' in data:
             # Limit to first 5 related articles
-            for article in data['articles'][:5]:
+            for article in data['articles'][:6]:
                 if article['url'] != "https://removed.com" and article['url'] != url:
                     related_urls.append(article['url'])
 
