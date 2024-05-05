@@ -26,7 +26,11 @@ api_key = os.getenv("OPENAI_API_KEY")
 # NEWS_API_KEY = os.getenv("NEWS_KEY")
 PERIGON_KEY = os.getenv("PERIGON_KEY")
 
-st.title("Compare News Articles")
+st.title("Welcome to PRISM 👋")
+
+st.subheader(
+    "# Enter the URL of any news article. PRISM will compare and summarize it with alternate news coverage on the topic.")
+
 
 # Accept user input for a single URL.
 url = st.text_input("Enter the article's URL: ")

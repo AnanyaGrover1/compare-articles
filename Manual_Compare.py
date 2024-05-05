@@ -13,14 +13,16 @@ api_key = os.getenv("OPENAI_API_KEY")
 
 st.set_page_config(
     page_title="PRISM",
-    page_icon="👋",
+    page_icon="📰",
 )
-st.write("# Welcome to PRISM! Enter the URLs of upto three different news articles on the same topic, which you wish to compare.")
 
 st.sidebar.success("Switch to another interface")
 
 
-st.title("Compare news articles")
+st.title("Welcome to PRISM 👋")
+
+st.subheader(
+    "# Enter the URLs of upto three different news articles on the same topic, which you wish to compare.")
 
 # Accept user input for the URLs
 url1 = st.text_input("Enter the first article's URL: ")
