@@ -22,7 +22,7 @@ st.sidebar.success("Switch to another interface")
 st.title("Welcome to PRISM 👋")
 
 st.subheader(
-    "# Enter the URLs of upto three different news articles on the same topic, which you wish to compare.")
+    "Enter the URLs of upto three different news articles on the same topic, which you wish to compare.")
 
 # Accept user input for the URLs
 url1 = st.text_input("Enter the first article's URL: ")
