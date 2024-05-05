@@ -11,6 +11,15 @@ load_dotenv()
 
 api_key = os.getenv("OPENAI_API_KEY")
 
+st.set_page_config(
+    page_title="PRISM",
+    page_icon="👋",
+)
+st.write("# Welcome to PRISM! Enter the URLs of upto three different news articles on the same topic, which you wish to compare.")
+
+st.sidebar.success("Switch to another interface")
+
+
 st.title("Compare news articles")
 
 # Accept user input for the URLs
