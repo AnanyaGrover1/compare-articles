@@ -228,6 +228,7 @@ if st.button("Find Related Articles"):
 
                 for i, content in enumerate(article_content):
                     message += f"Article {i+1}:\n{content}\n\n"
+                    print(message)
 
                 message += """
 
