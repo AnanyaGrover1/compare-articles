@@ -28,8 +28,10 @@ PERIGON_KEY = os.getenv("PERIGON_KEY")
 
 st.title("Welcome to PRISM 👋")
 
+st.sidebar.success("Switch to another interface")
+
 st.subheader(
-    "# Enter the URL of any news article. PRISM will compare and summarize it with alternate news coverage on the topic.")
+    "Enter the URL of any news article. PRISM will compare and summarize it with alternate news coverage on the topic.")
 
 
 # Accept user input for a single URL.
