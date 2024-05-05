@@ -215,7 +215,8 @@ if st.button("Find Related Articles"):
             5. Now, analyze the differences in the viewpoints presented in each article.
             6. Finally, notice any selective omissions of information.
 
-            Now, summarize the articles together in five sets of bullet points:
+            First, list the publishers of the articles you are comparing in order: "Article 1: Publisher Name; Article 2: Publisher Name; Article 3: Publisher Name."
+            Then, summarize the articles together in five sets of bullet points:
 
             * Upto five main points of agreement between the articles
             * Any points of factual disagreement
