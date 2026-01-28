@@ -14,14 +14,12 @@ The core of this project compares three LLM architectures to determine which bes
 
 | File / Folder | Description |
 | --- | --- |
-| `📰_Manual_Compare.py` | The main entry point for the **Streamlit Web App**. |
-| `pages/` | Contains additional views/modules for the multipage web application. |
 | `autograder.py` | The **LLM-as-a-Judge** framework used for automated evaluation. |
 | `compare_multichat.py` | Implementation of the **Multiagent Group (MGC)** approach. |
 | `compare_openai_3.py` | Implementation of **Chain of Thought (CoT)** and **Zero-Shot** logic. |
 | `evaluation_scores.csv` | Raw data from the LLM-based autograder and manual evaluation. |
 | `summaries_pairs.csv` | Dataset containing the human written pairs of news summaries for comparison. |
-| `web/` | Legacy or backup code for web interface components. |
+| `📰_Manual_Compare.py` | Another page on the **Streamlit Web App** allowing for manually entering the news links to be compared |
 
 ## 🧪 Evaluation Methodology
 
@@ -51,8 +49,3 @@ pip install -r requirements.txt
 
 Follow the streamlit link on the right hand menu
 
-
-
----
-
-**Would you like me to add a specific section explaining how the Reddit chatbot is triggered or how to configure the API keys for the autograder?**
