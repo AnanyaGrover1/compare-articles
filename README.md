@@ -47,5 +47,7 @@ pip install -r requirements.txt
 
 ## 🛠️ Run the web app directly
 
-Follow the streamlit link on the right hand menu
+Follow the streamlit link: prismbot.streamlit.app/
+
+Note that you may need to add API keys (paid) for the News API and OpenAI API for the application to work as intended. 
 
